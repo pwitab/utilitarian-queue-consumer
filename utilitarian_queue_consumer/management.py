@@ -16,11 +16,13 @@ def execute_from_cli(argv=None):
     for exchange_name, exchange_settings in settings.EXCHANGES.items():
         exchange = kombu.Exchange(
             name=exchange_name,
-            type=exchange_settings.get('type', 'direct'),
+            type=exchange_settings.get('type', 'topic'),
             durable=exchange_settings.get('durable', False),
             channel=connection
+
         )
         exchanges[exchange_name] = exchange
+        exchange.declare()
 
     # Create Queues
     queues = dict()
@@ -33,6 +35,7 @@ def execute_from_cli(argv=None):
                             channel=connection)
 
         queues[queue_name] = queue
+        queue.declare()
 
     worker_class = import_string(settings.WORKER_CLASS)
     worker = worker_class(connection, exchanges, queues)

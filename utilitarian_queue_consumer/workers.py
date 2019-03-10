@@ -1,4 +1,5 @@
 from kombu.mixins import ConsumerProducerMixin, ConsumerMixin
+from kombu.messaging import Consumer, Producer
 
 from utilitarian_queue_consumer.conf import settings
 
@@ -52,3 +53,9 @@ class UtilitarianProducingConsumer(ConsumerProducerMixin, UtilitarianConsumer):
 
     def handle_message(self, message):
         raise NotImplementedError('This needs to be implemented in subclass')
+
+    @property
+    def producer(self):
+        # Giving the producer a default exchange
+        return Producer(self.producer_connection,
+                        exchange=self.exchanges.get(settings.PUBLISH_TO))
