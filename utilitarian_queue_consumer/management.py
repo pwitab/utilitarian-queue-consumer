@@ -1,12 +1,24 @@
 import sys
+import logging
 
 import kombu
 
 from utilitarian_queue_consumer.conf import settings
 from utilitarian_queue_consumer.utils.module_loading import import_string
+from utilitarian_queue_consumer.utils.log import configure_logging
+
+log = logging.getLogger(__name__)
 
 
 def execute_from_cli(argv=None):
+    """
+    Configure settings and logging.
+    Set up queue connection and set up and declare all echanges and queues.
+    """
+
+    settings.configure()
+
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
 
     # Set up Connection
     connection = kombu.Connection(settings.AMQP_CONNECTION_STRING)

@@ -1,8 +1,11 @@
+import logging
+
 from kombu.mixins import ConsumerProducerMixin, ConsumerMixin
 from kombu.messaging import Consumer, Producer
 
 from utilitarian_queue_consumer.conf import settings
 
+log = logging.getLogger(__name__)
 
 class UtilitarianMessageHandlerError(Exception):
     """An exception occured in """
@@ -13,6 +16,9 @@ class UtilitarianConsumer(ConsumerMixin):
     Base class for consumers that are running in Utilitarian
     Define the handle_message method to process a message in a
     subclass of this class.
+
+    If a message makes causes an exception that is not caught in the subclass
+    consumer the message will be rejected.
     """
 
     def __init__(self, connection, exchanges, queues):
@@ -39,10 +45,13 @@ class UtilitarianConsumer(ConsumerMixin):
         try:
             self.handle_message(message)
         except Exception as e:
+            log.exception(e)
+            message.reject()
             raise UtilitarianMessageHandlerError() from e
 
     def handle_message(self, message):
-        raise NotImplementedError('This needs to be implemented in subclass')
+        raise NotImplementedError(
+            'handle_message() needs to be implemented in subclass')
 
 
 class UtilitarianProducingConsumer(ConsumerProducerMixin, UtilitarianConsumer):
@@ -52,7 +61,8 @@ class UtilitarianProducingConsumer(ConsumerProducerMixin, UtilitarianConsumer):
     """
 
     def handle_message(self, message):
-        raise NotImplementedError('This needs to be implemented in subclass')
+        raise NotImplementedError(
+            'handle_message() needs to be implemented in subclass')
 
     @property
     def producer(self):
