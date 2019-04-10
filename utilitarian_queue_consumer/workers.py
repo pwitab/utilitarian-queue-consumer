@@ -92,7 +92,7 @@ class UtilitarianProducingConsumer(ConsumerProducerMixin, UtilitarianConsumer):
                 'on_revive': self.on_connection_revival
             },
             # declare exchange and queue and bind them
-            declare=self.queues)
+            declare=self.queues.values())  # queues is a dict.
         log.info(f'Published '
                  f'message: {self.producer.exchange.name}::{routing_key}')
         log.debug(f'Published '
