@@ -7,6 +7,7 @@ from utilitarian_queue_consumer.conf import settings
 
 log = logging.getLogger(__name__)
 
+
 class UtilitarianMessageHandlerError(Exception):
     """An exception occured in """
 
@@ -63,6 +64,48 @@ class UtilitarianProducingConsumer(ConsumerProducerMixin, UtilitarianConsumer):
     def handle_message(self, message):
         raise NotImplementedError(
             'handle_message() needs to be implemented in subclass')
+
+    def publish(self, message_body, routing_key, exchange=None):
+        """
+        Default publish method. Gives good defaults. If you need more control
+        override in subclass.
+        """
+
+        publish_exchange = exchange or self.producer.exchange
+
+        self.producer.publish(
+            body=message_body,
+            exchange=publish_exchange,
+            routing_key=routing_key,
+            retry=settings.PUBLISH_RETRY,
+            retry_policy={
+                # First retry immediately,
+                'interval_start': settings.PUBLISH_RETRY_INTERVAL_START,
+                # then increase by 2s for every retry.
+                'interval_step': settings.PUBLISH_RETRY_INTERVAL_STEP,
+                # but don't exceed 30s between retries.
+                'interval_max': settings.PUBLISH_RETRY_INTERVAL_MAX,
+                # give up after 30 tries.
+                'max_retries': settings.PUBLISH_RETRY_MAX_RETRIES,
+                # callback for logging
+                'errback': self.on_publish_error,
+                'on_revive': self.on_connection_revival
+            },
+            # declare exchange and queue and bind them
+            declare=self.queues)
+        log.info(f'Published '
+                 f'message: {self.producer.exchange.name}::{routing_key}')
+        log.debug(f'Published '
+                  f'message_body: {message_body}')
+
+    @staticmethod
+    def on_publish_error(exc, interval):
+        log.exception(f'Connection error during publish, will retry '
+                      f'in {interval} seconds', exc_info=exc)
+
+    @staticmethod
+    def on_connection_revival(channel):
+        log.info(f'Connection to AMQP broker was revived')
 
     @property
     def producer(self):
